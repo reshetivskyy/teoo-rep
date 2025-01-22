@@ -48,42 +48,34 @@ def is_admin(chat_id, user_id):
     member = bot.get_chat_member(chat_id, user_id)
     return member.status in ['administrator', 'creator']
 
-def get_target_user(message: Message):
-    target_user = message.reply_to_message.from_user if message.reply_to_message else message.entities[1].user if len(message.entities) > 1 else None
-    return target_user
-
-
 @bot.message_handler(commands=['rep'])
 def increase_rep(message: Message):
     if not is_admin(message.chat.id, message.from_user.id):
         return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
 
-    target_user = get_target_user(message)
-
-    if is_admin(message.chat.id, target_user.id):
-        bot.reply_to(message.chat.id, "Репутація адміністрації непохитно висока!")
-
+    target_user = message.reply_to_message.from_user if message.reply_to_message else None
     if target_user:
+        if is_admin(message.chat.id, target_user.id):
+            bot.reply_to(message.chat.id, "Репутація адміністрації непохитно висока!")
         current_reputation = update_reputation(target_user.id, message.chat.id, 1)
         bot.reply_to(message, f"Репутація {target_user.first_name} збільшена на 1.\nПоточна репутація: {current_reputation}")
     else:
-        bot.reply_to(message, "Використовуйте /rep у відповідь на повідомлення або з @username.")
+        bot.reply_to(message, "Використовуйте /rep у відповідь на повідомлення.")
 
 @bot.message_handler(commands=['norep'])
 def decrease_rep(message: Message):
     if not is_admin(message.chat.id, message.from_user.id):
         return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
 
-    target_user = get_target_user(message)
-
-    if is_admin(message.chat.id, target_user.id):
-        bot.reply_to(message.chat.id, "Репутація адміністрації непохитно висока!")
+    target_user = message.reply_to_message.from_user if message.reply_to_message else None
 
     if target_user:
+        if is_admin(message.chat.id, target_user.id):
+            bot.reply_to(message.chat.id, "Репутація адміністрації непохитно висока!")
         current_reputation = update_reputation(target_user.id, message.chat.id, -1)
         bot.reply_to(message, f"Репутація {target_user.first_name} зменшена на 1.\nПоточна репутація: {current_reputation}")
     else:
-        bot.reply_to(message, "Використовуйте /norep у відповідь на повідомлення або з @username.")
+        bot.reply_to(message, "Використовуйте /norep у відповідь на повідомлення.")
 
 @bot.message_handler(commands=['repboard'])
 def repboard(message: Message):
@@ -99,16 +91,19 @@ def repboard(message: Message):
     top_5 = sorted_users[:5]
     board_message = "🏆 Топ 5 за репутацією:\n"
     for i, (user_id, rep) in enumerate(top_5, start=1):
-        user = bot.get_chat_member(message.chat.id, int(user_id)).user
+        user = bot.get_chat_member(message.chat.id, user_id).user
         board_message += f"{i}. {user.first_name} - {rep} репутації\n"
 
-    target_user = get_target_user(message)
+    target_user = message.reply_to_message.from_user if message.reply_to_message else message.from_user
 
     if str(target_user.id) not in [user[0] for user in top_5]:
-        user_rep = chat_reputation.get(str(target_user.id), 0)
-        user_position = sorted_users.index((target_user.id, user_rep)) + 1
         first_name = bot.get_chat_member(message.chat.id, target_user.id).user.first_name
-        board_message += f"\n👤 {user_position}. {first_name} - {user_rep} репутації" if not is_admin(target_user.id) else f"{first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
+        if is_admin(message.chat.id, target_user.id):
+            board_message += f"{first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
+        else:
+            user_rep = chat_reputation.get(str(target_user.id), 0)
+            user_position = sorted_users.index((target_user.id, user_rep)) + 1
+            board_message += f"\n👤 {user_position}. {first_name} - {user_rep} репутації"
 
     bot.reply_to(message, board_message)
 

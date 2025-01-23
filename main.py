@@ -83,7 +83,7 @@ def has_info(chat_id):
     chat_id_str = str(chat_id)
     return chat_id_str in reputation
 
-def format_repboard(chat_id, target_user=None):
+def format_repboard(chat_id, target_user):
     reputation = load_reputation()
     chat_id_str = str(chat_id)
 
@@ -98,14 +98,14 @@ def format_repboard(chat_id, target_user=None):
         user = bot.get_chat_member(chat_id, user_id).user
         board_message += f"{i}. {user.first_name} - {rep} репутації\n"
 
-    if target_user and str(target_user.id) not in [user[0] for user in top_5]:
-        if str(target_user.id) in chat_reputation:
-            if is_admin(chat_id, target_user.id):
-                board_message += f"\n{target_user.first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
-            else:
-                user_rep = chat_reputation.get(str(target_user.id), 0)
-                user_position = sorted_users.index((target_user.id, user_rep)) + 1
-                board_message += f"\n👤 {user_position}. {target_user.first_name} - {user_rep} репутації"
+    if target_user:
+        target_user_str = str(target_user.id)
+        if not is_admin(chat_id, target_user_str):
+            if target_user_str in chat_reputation:
+                if target_user_str not in [item[0] for item in top_5]:
+                    user_rep = chat_reputation[target_user_str]
+                    user_position = [item[0] for item in sorted_users].index(target_user_str)
+                    board_message += f"\n👤 {user_position}. {target_user.first_name} - {user_rep} репутації"
 
     return board_message
 
@@ -166,14 +166,13 @@ def repboard(message: Message):
     if not is_admin(message.chat.id, bot.get_me().id):
         return bot.reply_to(message, "Я маю бути адміном.")
 
-    clear_repboard(message.chat.id)
-    
     if not has_info(message.chat.id):
         return bot.reply_to(message, "У цьому чаті ще немає даних про репутацію.")
 
     target_user = get_target_user(message)
-    board_message = format_repboard(message.chat.id, target_user)
+    clear_repboard(message.chat.id)
 
+    board_message = format_repboard(message.chat.id, target_user)
     bot_message = bot.reply_to(message, board_message)
 
     write_repboard(message.chat.id, message.id, bot_message.id)

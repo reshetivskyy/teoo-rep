@@ -112,7 +112,8 @@ def is_admin(chat_id, user_id):
 @bot.message_handler(commands=['rep'])
 def increase_rep(message: Message):
     if not is_admin(message.chat.id, message.from_user.id):
-        return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
+        # return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
+        return bot.delete_message(message.chat.id, message.id)
 
     target_user = get_target_user(message)
 
@@ -132,7 +133,8 @@ def increase_rep(message: Message):
 @bot.message_handler(commands=['norep'])
 def decrease_rep(message: Message):
     if not is_admin(message.chat.id, message.from_user.id):
-        return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
+        # return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
+        return bot.delete_message(message.chat.id, message.id)
 
     target_user = get_target_user(message)
 

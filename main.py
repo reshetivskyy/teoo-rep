@@ -115,7 +115,7 @@ def is_admin(chat_id, user_id):
 
 @bot.message_handler(commands=['rep'])
 def increase_rep(message: Message):
-    if is_admin(message.chat.id, bot.get_me().id):
+    if not is_admin(message.chat.id, bot.get_me().id):
         return bot.reply_to(message, "Я маю бути адміном.")
 
     if not is_admin(message.chat.id, message.from_user.id):
@@ -139,7 +139,7 @@ def increase_rep(message: Message):
 
 @bot.message_handler(commands=['norep'])
 def decrease_rep(message: Message):
-    if is_admin(message.chat.id, bot.get_me().id):
+    if not is_admin(message.chat.id, bot.get_me().id):
         return bot.reply_to(message, "Я маю бути адміном.")
 
     if not is_admin(message.chat.id, message.from_user.id):
@@ -163,6 +163,9 @@ def decrease_rep(message: Message):
 
 @bot.message_handler(commands=['repboard'])
 def repboard(message: Message):
+    if not is_admin(message.chat.id, bot.get_me().id):
+        return bot.reply_to(message, "Я маю бути адміном.")
+
     clear_repboard(message.chat.id)
     
     if not has_info(message.chat.id):

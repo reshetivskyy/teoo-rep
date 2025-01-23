@@ -53,6 +53,58 @@ def update_reputation(user_id, chat_id, delta):
 
     return reputation[chat_id_str][user_id_str]
 
+def clear_repboard(chat_id):
+    reputation = load_reputation()
+    chat_id_str = str(chat_id)
+
+    if chat_id_str in reputation:
+        if 'data' in reputation[chat_id_str]:
+            bot.delete_message(chat_id, reputation[chat_id_str]["data"]["last_call"])
+            bot.delete_message(chat_id, reputation[chat_id_str]["data"]["last_repboard"])
+
+    save_reputation(reputation)
+
+def write_repboard(chat_id, call_id, message_id):
+    reputation = load_reputation()
+    chat_id_str = str(chat_id)
+
+    if chat_id_str in reputation:
+        reputation[chat_id_str]['data'] = {}
+        reputation[chat_id_str]['data']['last_call'] = call_id
+        reputation[chat_id_str]['data']['last_repboard'] = message_id
+
+    save_reputation(reputation)
+
+def has_info(chat_id):
+    reputation = load_reputation()
+    chat_id_str = str(chat_id)
+    return chat_id_str in reputation
+
+def format_repboard(chat_id, target_user=None):
+    reputation = load_reputation()
+    chat_id_str = str(chat_id)
+
+    chat_reputation = reputation[chat_id_str]
+    chat_reputation.pop('data', None)
+
+    sorted_users = sorted(chat_reputation.items(), key=lambda x: x[1], reverse=True)
+    top_5 = sorted_users[:5]
+
+    board_message = "🏆 Топ 5 за репутацією:\n"
+    for i, (user_id, rep) in enumerate(top_5, start=1):
+        user = bot.get_chat_member(chat_id, user_id).user
+        board_message += f"{i}. {user.first_name} - {rep} репутації\n"
+
+    if target_user and str(target_user.id) not in [user[0] for user in top_5]:
+        if is_admin(chat_id, target_user.id):
+            board_message += f"\n{target_user.first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
+        else:
+            user_rep = chat_reputation.get(str(target_user.id), 0)
+            user_position = sorted_users.index((target_user.id, user_rep)) + 1
+            board_message += f"\n👤 {user_position}. {target_user.first_name} - {user_rep} репутації"
+
+    return board_message
+
 def is_admin(chat_id, user_id):
     member = bot.get_chat_member(chat_id, user_id)
     return member.status in ['administrator', 'creator']
@@ -65,8 +117,7 @@ def increase_rep(message: Message):
     target_user = get_target_user(message)
 
     if bot.get_me().id == target_user.id:
-        bot.reply_to(message, "Моя репутація непохитна!")
-        return
+        return bot.reply_to(message, "Моя репутація непохитна!")
 
     if target_user:
         if is_admin(message.chat.id, target_user.id):
@@ -86,8 +137,7 @@ def decrease_rep(message: Message):
     target_user = get_target_user(message)
 
     if bot.get_me().id == target_user.id:
-        bot.reply_to(message, "Моя репутація непохитна!")
-        return
+        return bot.reply_to(message, "Моя репутація непохитна!")
 
     if target_user:
         if is_admin(message.chat.id, target_user.id):
@@ -101,32 +151,17 @@ def decrease_rep(message: Message):
 
 @bot.message_handler(commands=['repboard'])
 def repboard(message: Message):
-    reputation = load_reputation()
-    chat_id_str = str(message.chat.id)
+    clear_repboard(message.chat.id)
     
-    if chat_id_str not in reputation:
+    if not has_info(message.chat.id):
         return bot.reply_to(message, "У цьому чаті ще немає даних про репутацію.")
 
-    chat_reputation = reputation[chat_id_str]
-    sorted_users = sorted(chat_reputation.items(), key=lambda x: x[1], reverse=True)
-
-    top_5 = sorted_users[:5]
-    board_message = "🏆 Топ 5 за репутацією:\n"
-    for i, (user_id, rep) in enumerate(top_5, start=1):
-        user = bot.get_chat_member(message.chat.id, user_id).user
-        board_message += f"{i}. {user.first_name} - {rep} репутації\n"
-
     target_user = get_target_user(message)
+    board_message = format_repboard(message.chat.id, target_user)
 
-    if str(target_user.id) not in [user[0] for user in top_5]:
-        if is_admin(message.chat.id, target_user.id):
-            board_message += f"\n{target_user.first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
-        else:
-            user_rep = chat_reputation.get(str(target_user.id), 0)
-            user_position = sorted_users.index((target_user.id, user_rep)) + 1
-            board_message += f"\n👤 {user_position}. {target_user.first_name} - {user_rep} репутації"
+    bot_message = bot.reply_to(message, board_message)
 
-    bot.reply_to(message, board_message)
+    write_repboard(message.chat.id, message.id, bot_message.id)
 
 if __name__ == "__main__":
     bot.polling(non_stop=True)

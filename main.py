@@ -99,12 +99,13 @@ def format_repboard(chat_id, target_user=None):
         board_message += f"{i}. {user.first_name} - {rep} репутації\n"
 
     if target_user and str(target_user.id) not in [user[0] for user in top_5]:
-        if is_admin(chat_id, target_user.id):
-            board_message += f"\n{target_user.first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
-        else:
-            user_rep = chat_reputation.get(str(target_user.id), 0)
-            user_position = sorted_users.index((target_user.id, user_rep)) + 1
-            board_message += f"\n👤 {user_position}. {target_user.first_name} - {user_rep} репутації"
+        if str(target_user.id) in chat_reputation:
+            if is_admin(chat_id, target_user.id):
+                board_message += f"\n{target_user.first_name} - НЕЙМОВІРНО БАГАТО РЕПУТАЦІЇ!"
+            else:
+                user_rep = chat_reputation.get(str(target_user.id), 0)
+                user_position = sorted_users.index((target_user.id, user_rep)) + 1
+                board_message += f"\n👤 {user_position}. {target_user.first_name} - {user_rep} репутації"
 
     return board_message
 
@@ -114,6 +115,9 @@ def is_admin(chat_id, user_id):
 
 @bot.message_handler(commands=['rep'])
 def increase_rep(message: Message):
+    if is_admin(message.chat.id, bot.get_me().id):
+        return bot.reply_to(message, "Я маю бути адміном.")
+
     if not is_admin(message.chat.id, message.from_user.id):
         # return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
         return bot.delete_message(message.chat.id, message.id)
@@ -135,6 +139,9 @@ def increase_rep(message: Message):
 
 @bot.message_handler(commands=['norep'])
 def decrease_rep(message: Message):
+    if is_admin(message.chat.id, bot.get_me().id):
+        return bot.reply_to(message, "Я маю бути адміном.")
+
     if not is_admin(message.chat.id, message.from_user.id):
         # return bot.reply_to(message, "Тільки адміни можуть змінювати репутацію.")
         return bot.delete_message(message.chat.id, message.id)

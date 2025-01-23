@@ -59,8 +59,11 @@ def clear_repboard(chat_id):
 
     if chat_id_str in reputation:
         if 'data' in reputation[chat_id_str]:
-            bot.delete_message(chat_id, reputation[chat_id_str]["data"]["last_call"])
-            bot.delete_message(chat_id, reputation[chat_id_str]["data"]["last_repboard"])
+            try:
+                bot.delete_message(chat_id, reputation[chat_id_str]["data"]["last_call"])
+                bot.delete_message(chat_id, reputation[chat_id_str]["data"]["last_repboard"])
+            except:
+                pass
 
     save_reputation(reputation)
 
